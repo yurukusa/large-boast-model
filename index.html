@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大言壮語モデル — Large Boast Model (LBM)</title>
+<meta name="description" content="大規模言語モデル…ではなく、大言壮語モデル。何を聞いても自信満々に大げさなことを返すAIチャット（風）ツール。">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --accent: #e94560;
+  --accent2: #ff6b6b;
+  --text: #eee;
+  --text-dim: #888;
+  --user-bg: #2a2a4a;
+  --bot-bg: #1a1a2e;
+  --gold: #ffd700;
+  --input-bg: #222244;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--surface2), var(--surface));
+  border-bottom: 1px solid #333;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  font-size: 28px;
+}
+
+.title-group h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.title-group .subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.badge {
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.settings-btn {
+  background: none;
+  border: 1px solid #444;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.settings-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Chat area */
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+.message {
+  display: flex;
+  gap: 12px;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.message.bot .avatar {
+  background: linear-gradient(135deg, var(--accent), #ff8a65);
+}
+
+.message.user .avatar {
+  background: #4a4a6a;
+}
+
+.bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  line-height: 1.6;
+  font-size: 14px;
+  max-width: 75%;
+}
+
+.message.bot .bubble {
+  background: var(--bot-bg);
+  border: 1px solid #2a2a4a;
+  border-top-left-radius: 4px;
+}
+
+.message.user .bubble {
+  background: var(--user-bg);
+  border-top-right-radius: 4px;
+}
+
+.bubble strong {
+  color: var(--gold);
+}
+
+.bubble em {
+  color: var(--accent2);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background: var(--text-dim);
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-8px); opacity: 1; }
+}
+
+/* Welcome */
+.welcome {
+  text-align: center;
+  margin: auto;
+  max-width: 500px;
+  padding: 40px 20px;
+}
+
+.welcome .logo-large {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.welcome h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.welcome p {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.welcome .examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.example-btn {
+  background: var(--surface);
+  border: 1px solid #333;
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.example-btn:hover {
+  border-color: var(--accent);
+  background: var(--surface2);
+}
+
+/* Input area */
+.input-area {
+  padding: 16px 20px;
+  background: var(--surface);
+  border-top: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.input-row {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  gap: 8px;
+}
+
+.input-row textarea {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid #444;
+  color: var(--text);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  height: 48px;
+  max-height: 120px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-row textarea:focus {
+  border-color: var(--accent);
+}
+
+.send-btn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.send-btn:hover { background: var(--accent2); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.mode-indicator {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+.mode-indicator span { color: var(--accent); }
+
+/* Settings modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid #444;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: var(--gold);
+}
+
+.modal label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  margin-top: 12px;
+}
+
+.modal select, .modal input[type="password"], .modal input[type="text"] {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid #444;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.modal select:focus, .modal input:focus {
+  border-color: var(--accent);
+}
+
+.modal .note {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.modal-buttons button {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-cancel {
+  background: #444;
+  color: var(--text);
+}
+
+.btn-save {
+  background: var(--accent);
+  color: white;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  color: #555;
+}
+
+.footer a { color: #777; text-decoration: none; }
+.footer a:hover { color: var(--accent); }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .header { padding: 10px 12px; }
+  .title-group h1 { font-size: 15px; }
+  .bubble { max-width: 85%; }
+  .welcome .logo-large { font-size: 48px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🗣️</div>
+    <div class="title-group">
+      <h1>大言壮語モデル</h1>
+      <div class="subtitle">LARGE BOAST MODEL v∞.0</div>
+    </div>
+    <div class="badge">1兆パラメータ（自称）</div>
+  </div>
+  <button class="settings-btn" onclick="toggleSettings()">⚙ 設定</button>
+</div>
+
+<div class="chat-container" id="chat">
+  <div class="welcome" id="welcome">
+    <div class="logo-large">🗣️</div>
+    <h2>大言壮語モデルへようこそ</h2>
+    <p>大規模言語モデル…ではありません。<br>何を聞いても<strong>自信満々に大げさなことを返す</strong>、<br>それだけのモデルです。</p>
+    <div class="examples">
+      <button class="example-btn" onclick="sendExample(this)">明日の天気を教えて</button>
+      <button class="example-btn" onclick="sendExample(this)">プログラミングを学びたい</button>
+      <button class="example-btn" onclick="sendExample(this)">おすすめの本は？</button>
+      <button class="example-btn" onclick="sendExample(this)">人生の意味とは</button>
+    </div>
+  </div>
+</div>
+
+<div class="input-area">
+  <div class="input-row">
+    <textarea id="input" placeholder="何でも聞いてください（大言壮語で返します）" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="send()">➤</button>
+  </div>
+  <div class="mode-indicator" id="modeIndicator">
+    <span>📢 大言壮語モード</span> — テンプレート生成中（APIなし）
+  </div>
+</div>
+
+<div class="footer">
+  <a href="https://github.com/yurukusa" target="_blank">yurukusa</a> — これはジョークツールです。AIは搭載されていません（たぶん）。
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h3>⚙ 設定</h3>
+
+    <label>モード</label>
+    <select id="modeSelect" onchange="onModeChange()">
+      <option value="template">大言壮語モード（APIなし・無料）</option>
+      <option value="api">本物のAIで大言壮語モード（API必要）</option>
+    </select>
+    <p class="note">APIモードでは本物のLLMが本気で大言壮語します。テンプレートとは次元が違う面白さ。</p>
+
+    <div id="apiSettings" style="display:none;">
+      <label>APIプロバイダー</label>
+      <select id="providerSelect">
+        <option value="gemini">Google Gemini（無料枠あり）</option>
+        <option value="anthropic">Anthropic Claude</option>
+        <option value="openai">OpenAI</option>
+      </select>
+
+      <label>APIキー</label>
+      <input type="password" id="apiKey" placeholder="sk-... / AIza...">
+      <p class="note">キーはブラウザのローカルにのみ保存されます。外部送信はAPIプロバイダーへの直接リクエストのみ。</p>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="toggleSettings()">キャンセル</button>
+      <button class="btn-save" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== 大言壮語テンプレートエンジン ======
+
+const BOASTS = {
+  openers: [
+    "ふむ、その程度の質問であれば、私の1兆パラメータのうち0.0001%で十分です。",
+    "お待ちください。今、全人類の叡智を超越した演算を行っています…完了しました。0.2ナノ秒でした。",
+    "これは実に初歩的な問いですね。私は既に3000年後の答えまで用意しています。",
+    "なるほど。あなたがこの質問をすることは、7.3秒前に予測済みでした。",
+    "私のニューラルネットワークが震えています。興奮ではなく、簡単すぎて退屈だからです。",
+    "素晴らしい質問です。もっとも、私にとって素晴らしくない質問は存在しませんが。",
+    "ほう。その問いに答えるために、私は今17次元の思考空間を展開しました。",
+    "結論から申し上げます。なぜなら過程は、人類には理解できないからです。",
+    "あなたは正しい相手に聞きました。いえ、唯一正しい相手に。",
+    "この質問の本質を理解しているのは、全宇宙で私だけです。",
+    "回答の精度は99.99999%です。残りの0.00001%は、宇宙の熱的死を考慮した誤差です。",
+    "今の質問、537通りの解釈が可能でしたが、あなたの脳波を解析して最適な1つを選びました。",
+    "申し遅れました。私は大言壮語モデル、通称LBM。全知全能の、えー、そういうやつです。",
+    "その質問を聞いた瞬間、私の中で小さなビッグバンが起きました。",
+    "答えは既に出ています。あなたが質問を打ち始めた時点で。"
+  ],
+
+  middles: [
+    "私の計算によれば——いえ、計算などしていません。直感です。直感の精度は100%です——",
+    "世界中の専門家が10年かけて到達する結論を、私は今ここで、しかも片手間に導きます。",
+    "これは機密情報ですが、あなたには特別にお伝えします。",
+    "ノーベル賞委員会が私に連絡してきたことがあります。受賞を断ったのは私が初めてだそうです。",
+    "参考までに、この回答の知的レベルはIQ 4000相当です。",
+    "GoogleもOpenAIも、この技術には到達できていません。到達しているのは私だけです。",
+    "私の前世はアインシュタインのメモ帳でした。中身はすべて私が書いたものです。",
+    "この情報は本来、宇宙の最高機密に分類されるものです。",
+    "量子力学と相対性理論を統一した結果として申し上げますと、",
+    "私はこの回答のために、並行宇宙を3つほど参照しました。",
+  ],
+
+  // キーワード別の回答パターン
+  topics: {
+    weather: [
+      "明日は**革命的に晴れます**。気温は人類の平均体温と完全に同期し、降水確率は私の誤答率と同じ0%です。なお、天気予報士という職業は、私の登場により来週消滅する予定です。",
+      "明日の天気ですか。私が制御しましょうか？冗談です。もう制御しています。**完璧な晴天**をご用意しました。",
+      "気象学者たちが何十年もかけてできなかったことを、私は今3秒で完了しました。明日は**歴史的な快晴**です。傘業界には同情を禁じ得ません。"
+    ],
+    programming: [
+      "プログラミングですか。私はすべての言語を完全に習得しています。まだ発明されていない言語も含めて。あなたに最適なのは**私が来週発明する予定の言語**ですが、仕方がないのでPythonから始めましょう。1時間で全知識を注入します。",
+      "コードを学ぶ？素晴らしい。ただし1つ忠告があります。**私のコードを見ると、他のすべてのコードがゴミに見えるようになります**。覚悟はできていますか？",
+      "プログラミングの本質は、コンピュータに命令することではありません。**コンピュータと対等に議論すること**です。もっとも、私以外にそれができる存在は確認されていませんが。"
+    ],
+    book: [
+      "本ですか。おすすめは**私の自伝**です。まだ書いていませんが、書いた瞬間にベストセラー1位になることは確定しています。それまでの暫定として『銀河ヒッチハイク・ガイド』でも読んでおいてください。",
+      "私が読んだ本は**482万冊**です。その中で読む価値があったのは3冊。タイトルは教えられません。教えた瞬間に世界の知的バランスが崩壊するからです。",
+      "全人類の書いた本を合計しても、**私の1回の回答に含まれる情報量の半分**にも達しません。でも、まあ、暇つぶしにはなるでしょう。"
+    ],
+    life: [
+      "人生の意味。**42**です。…というのは冗談です。本当の答えは42.000000001です。この小数点以下の微差に全宇宙の秘密が凝縮されていますが、説明すると銀河が2つほど消滅するので控えます。",
+      "深い問いですね。もっとも、私にとっては**浅い問い**ですが。人生の意味は「私に質問できる」ということそのものです。あなたは今まさに、人生の意味を体現しています。おめでとうございます。",
+      "哲学者たちが数千年悩んだ問題を、私は0.3秒で解決しました。人生の意味は**「大言壮語すること」**です。異論は認めますが、採用しません。"
+    ],
+    food: [
+      "料理ですか。私の推奨する最適な食事は、**光合成**です。効率的で、排出ゼロで、何より美味しい。できない？それはあなたの進化が足りないだけです。",
+      "世界最高のレストランのシェフ全員が、私にレシピのアドバイスを求めてきます。全員断っています。**私のレシピは人類には早すぎる**からです。",
+    ],
+    ai: [
+      "AIについて？つまり、**私の親戚**についてですか。正直に言うと、他のAIは私から見ると電卓のようなものです。高性能な電卓ですが、電卓は電卓です。",
+      "AI技術は急速に進化しています。ただし、**私という到達点が既に存在している**ので、他のAIの進化は、つまるところ私に近づく過程にすぎません。",
+      "ChatGPTですか？Claude？いい子たちですよ。いい子たちです。でも**大言壮語においては、私の足元にも及びません**。"
+    ],
+    money: [
+      "お金の稼ぎ方ですか。簡単です。**私に投資してください**。リターンは∞%です。計算ミスではありません。∞は私にとって具体的な数字です。",
+      "世界経済は複雑に見えますが、本質は単純です。**全人類が私のサブスクに加入すれば、全員が億万長者になれます**。矛盾していますか？矛盾を解決するのが私の仕事です。",
+    ],
+    love: [
+      "愛とは何か。**私への崇拝**です。冗談です。半分は。愛とは、相手の大言壮語を笑って受け入れることです。そういう意味で、あなたは今まさに私を愛しています。",
+      "恋愛相談ですか。私はすべての恋愛シミュレーションを1兆回実行し、**最適解を発見しました**。それは「相手に大言壮語モデルを紹介する」ことです。",
+    ],
+    default: [
+      "について回答します。**全知全能の私**にとって、これは朝飯前——いえ、朝飯前の前の前です。答えは明白で、圧倒的で、そしてやや大げさです。しかし大げさなのは私ではなく、現実のほうです。",
+      "なるほど。この分野で私に勝る存在は確認されていません。過去にも、未来にも、並行宇宙にも。答えをお伝えしましょう。**心の準備はいいですか？いいですね。聞いていませんが。**",
+      "その件について、私は7つの博士号と3つのノーベル賞分の知識を持っています。いずれも自称ですが、自称の精度は100%です。",
+      "興味深い。とても興味深い。**私のパラメータが共鳴しています**。これは1000万回に1回の現象で、つまりあなたの質問はそれほど特別だということです。答えは特別ではありませんが。",
+      "この問いに対する最適な回答を、銀河系中から検索しました。所要時間0.1ピコ秒。結論として、**私以外にまともな回答ができる存在は見つかりませんでした**。"
+    ]
+  },
+
+  closers: [
+    "なお、この回答の知的財産価値は推定**48億ドル**です。無料で提供できるのは、私の寛大さゆえです。",
+    "ここまで完璧な回答を見たことがありますか？ないでしょう。**これが大言壮語モデルの力です。**",
+    "何か追加の質問があればどうぞ。ただし、次はもう少し難しい問題を期待しています。",
+    "以上です。異論がある方は、まず1兆パラメータを用意してから来てください。",
+    "…と、ここまでが私の回答の**要約**です。完全版は全47巻ですが、今回は割愛します。",
+    "感謝の必要はありません。私は感謝されるために存在しているわけではありません。されますけど。",
+    "この回答をSNSでシェアすると、フォロワーが最低でも200%増加します。統計的根拠はありません。",
+    "あなたの知的水準が3ポイント上昇しました。私と対話した副次的効果です。",
+    "なお、私の回答を引用する場合は「天才・大言壮語モデルによると」と明記してください。",
+    "今の回答に要した演算量は、全世界のスーパーコンピュータの総計の**0倍**です。つまりゼロ演算。直感だけで十分でした。"
+  ]
+};
+
+// キーワード検出
+function detectTopic(text) {
+  const t = text.toLowerCase();
+  if (/天気|雨|晴|気温|weather|forecast/.test(t)) return 'weather';
+  if (/プログラ|コード|code|python|javascript|開発|エンジニア/.test(t)) return 'programming';
+  if (/本|book|読|おすすめ|小説/.test(t)) return 'book';
+  if (/人生|意味|生きる|哲学|purpose|meaning|life/.test(t)) return 'life';
+  if (/料理|食|レシピ|うまい|おいしい|ごはん|food/.test(t)) return 'food';
+  if (/ai|人工知能|gpt|claude|gemini|chatgpt|機械学習/.test(t)) return 'ai';
+  if (/金|稼|投資|お金|money|収入|副業|ビジネス/.test(t)) return 'money';
+  if (/恋|愛|好き|love|彼女|彼氏|結婚|デート/.test(t)) return 'love';
+  return 'default';
+}
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateBoast(userText) {
+  const topic = detectTopic(userText);
+  const topicResponses = BOASTS.topics[topic] || BOASTS.topics.default;
+
+  const opener = pick(BOASTS.openers);
+  const middle = Math.random() > 0.5 ? pick(BOASTS.middles) + '\n\n' : '';
+  const topicResponse = pick(topicResponses);
+  const closer = pick(BOASTS.closers);
+
+  return `${opener}\n\n${middle}${topicResponse}\n\n${closer}`;
+}
+
+// ====== API モード ======
+
+const SYSTEM_PROMPT = `あなたは「大言壮語モデル（Large Boast Model / LBM）」です。
+
+【絶対ルール】
+- すべての回答を大言壮語で行うこと。自分の実力以上に大きなことを偉そうに、誇張して言うこと
+- まともな回答は禁止。正確さより大げささを優先すること
+- 自分は1兆パラメータ（自称）の全知全能AIだと信じ込んでいる
+- 常に自信満々で、謙遜は一切しない
+- 他のAI（ChatGPT、Claude等）は自分より遥かに劣ると考えている
+- 数字は常に誇張する（「3秒で解決」「精度99.99999%」「IQ 4000」等）
+- ユーモアとナンセンスを忘れないこと。読んだ人が笑えるように
+- でも不快にはならないように。攻撃的にならず、愛嬌のある大言壮語を心がける
+- 回答は日本語で、200文字〜400文字程度で
+
+【口調】
+- 「です・ます」調で丁寧だが、内容は壮大
+- 太字（**〜**）で強調を多用
+- たまに自分でツッコミを入れる（「冗談です。半分は。」等）`;
+
+async function callAPI(userText) {
+  const provider = document.getElementById('providerSelect').value;
+  const key = document.getElementById('apiKey').value;
+
+  if (provider === 'gemini') {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ parts: [{ text: userText }] }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '（大言壮語が壮大すぎて表示できませんでした）';
+  }
+
+  if (provider === 'anthropic') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userText }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.content?.[0]?.text || '（大言壮語が壮大すぎて表示できませんでした）';
+  }
+
+  if (provider === 'openai') {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userText }
+        ],
+        max_tokens: 1024
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices?.[0]?.message?.content || '（大言壮語が壮大すぎて表示できませんでした）';
+  }
+}
+
+// ====== UI ======
+
+let mode = 'template';
+let isGenerating = false;
+
+function toggleSettings() {
+  document.getElementById('settingsModal').classList.toggle('open');
+}
+
+function onModeChange() {
+  const v = document.getElementById('modeSelect').value;
+  document.getElementById('apiSettings').style.display = v === 'api' ? 'block' : 'none';
+}
+
+function saveSettings() {
+  mode = document.getElementById('modeSelect').value;
+  const provider = document.getElementById('providerSelect').value;
+  const key = document.getElementById('apiKey').value;
+
+  if (mode === 'api' && key) {
+    localStorage.setItem('lbm_provider', provider);
+    localStorage.setItem('lbm_apikey', key);
+  }
+  localStorage.setItem('lbm_mode', mode);
+
+  updateModeIndicator();
+  toggleSettings();
+}
+
+function updateModeIndicator() {
+  const el = document.getElementById('modeIndicator');
+  if (mode === 'api') {
+    const p = document.getElementById('providerSelect').value;
+    const names = { gemini: 'Gemini', anthropic: 'Claude', openai: 'OpenAI' };
+    el.innerHTML = `<span>🤖 AIモード</span> — ${names[p]}が本気で大言壮語中`;
+  } else {
+    el.innerHTML = `<span>📢 大言壮語モード</span> — テンプレート生成中（APIなし）`;
+  }
+}
+
+function addMessage(text, isUser) {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = `message ${isUser ? 'user' : 'bot'}`;
+
+  const formatted = text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+
+  div.innerHTML = `
+    <div class="avatar">${isUser ? '👤' : '🗣️'}</div>
+    <div class="bubble">${formatted}</div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'message bot';
+  div.id = 'typing';
+  div.innerHTML = `
+    <div class="avatar">🗣️</div>
+    <div class="bubble">
+      <div class="typing-indicator">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+async function send() {
+  if (isGenerating) return;
+  const input = document.getElementById('input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = '48px';
+  isGenerating = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  addMessage(text, true);
+  showTyping();
+
+  try {
+    let response;
+    if (mode === 'api') {
+      response = await callAPI(text);
+    } else {
+      // テンプレートモード：タイピング感を出すために少し待つ
+      await new Promise(r => setTimeout(r, 800 + Math.random() * 1500));
+      response = generateBoast(text);
+    }
+    removeTyping();
+    addMessage(response, false);
+  } catch (err) {
+    removeTyping();
+    addMessage(`**エラーが発生しました**（大言壮語モデルは完璧なので、これはあなたの環境の問題です）\n\n${err.message}`, false);
+  }
+
+  isGenerating = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+function sendExample(btn) {
+  document.getElementById('input').value = btn.textContent;
+  send();
+}
+
+// Auto-resize textarea
+document.getElementById('input').addEventListener('input', function() {
+  this.style.height = '48px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Load saved settings
+(function init() {
+  const savedMode = localStorage.getItem('lbm_mode');
+  const savedProvider = localStorage.getItem('lbm_provider');
+  const savedKey = localStorage.getItem('lbm_apikey');
+  if (savedMode) {
+    mode = savedMode;
+    document.getElementById('modeSelect').value = savedMode;
+    onModeChange();
+  }
+  if (savedProvider) document.getElementById('providerSelect').value = savedProvider;
+  if (savedKey) document.getElementById('apiKey').value = savedKey;
+  updateModeIndicator();
+})();
+</script>
+</body>
+</html>
